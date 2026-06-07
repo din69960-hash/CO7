@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e1208">
+<title>ORIENT — Course d'orientation</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --olive:#4a5c2a;--olive-d:#2d3a18;--olive-l:#6b7d3a;
+  --green:#3d6b1e;--green-l:#5a9c2a;--green-ll:#7ab840;
+  --amber:#c8a000;--amber-l:#f0c000;
+  --bg:#0e1208;--bg2:#161b0c;--bg3:#1e2510;
+  --panel:#1a2010;--panel2:#222b13;
+  --border:#3a4a1e;--border-l:#4d6128;
+  --text:#c8d4a0;--text2:#8fa060;--text3:#5a6e35;
+  --red:#c0302a;--red-l:#e04040;
+  --mono:'Share Tech Mono',monospace;
+  --title:'Rajdhani',sans-serif;
+}
+.duel-badge{display:inline-block;background:rgba(200,160,0,.15);border:1px solid var(--amber);color:var(--amber-l);font-family:var(--mono);font-size:9px;letter-spacing:2px;padding:2px 7px;text-transform:uppercase;vertical-align:middle;margin-left:6px}
+.panel-btn.duel{border-color:var(--amber);color:var(--amber-l);background:rgba(200,160,0,.1)}
+.panel-btn.duel:hover{background:rgba(200,160,0,.25)}
+.timer-display.amber{color:var(--amber-l)}
+
+/* ── FIX MOBILE SCROLL : plus d'overflow:hidden global ── */
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--title);font-size:15px}
+
+.screen{display:none;width:100%;height:100vh;overflow:hidden}
+.screen.active{display:flex}
+
+#home{flex-direction:column;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
+#home::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(74,92,42,.12) 39px,rgba(74,92,42,.12) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(74,92,42,.12) 39px,rgba(74,92,42,.12) 40px)}
+.home-logo{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:2px;margin-bottom:8px;text-transform:uppercase;position:relative;z-index:1}
+.home-title{font-family:var(--title);font-size:64px;font-weight:700;color:var(--green-ll);letter-spacing:6px;text-transform:uppercase;line-height:1;margin-bottom:4px;position:relative;z-index:1;text-shadow:0 0 60px rgba(90,156,42,.25)}
+.home-sub{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:6px;margin-bottom:52px;text-transform:uppercase;position:relative;z-index:1}
+.home-card{background:var(--panel);border:1px solid var(--border);padding:28px 36px;width:360px;position:relative;z-index:1}
+.home-code-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:2px;margin-bottom:10px;text-transform:uppercase}
+.home-input{width:100%;background:var(--bg2);border:1px solid var(--border-l);color:var(--text);font-family:var(--mono);font-size:20px;padding:10px 14px;letter-spacing:8px;text-transform:uppercase;outline:none;transition:.2s}
+.home-input:focus{border-color:var(--green-l);box-shadow:0 0 0 1px var(--green)}
+.home-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.btn-entry{padding:13px;font-family:var(--title);font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;border:1px solid;cursor:pointer;transition:.15s;text-align:center}
+.btn-org{background:var(--olive-d);border-color:var(--olive-l);color:var(--green-ll)}
+.btn-org:hover{background:var(--olive);border-color:var(--green-l)}
+.btn-runner{background:transparent;border-color:var(--border-l);color:var(--text2)}
+.btn-runner:hover{background:var(--panel2);border-color:var(--green-l);color:var(--text)}
+.home-hint{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:10px;text-align:center}
+.home-error{font-family:var(--mono);font-size:11px;color:var(--red-l);margin-top:8px;min-height:16px;text-align:center}
+.deco-corner{position:absolute;width:60px;height:60px;border-color:var(--border);border-style:solid}
+.dc-tl{top:24px;left:24px;border-width:2px 0 0 2px}
+.dc-tr{top:24px;right:24px;border-width:2px 2px 0 0}
+.dc-bl{bottom:24px;left:24px;border-width:0 0 2px 2px}
+.dc-br{bottom:24px;right:24px;border-width:0 2px 2px 0}
+
+#org,#runner{flex-direction:row;height:100vh;position:relative}
+.sidebar{width:290px;min-width:290px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;z-index:20;transition:transform .3s}
+.map-area{flex:1;position:relative;overflow:hidden}
+#map,#map-runner{width:100%;height:100%}
+
+.sb-header{background:var(--olive-d);border-bottom:1px solid var(--border-l);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sb-title{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--green-ll);text-transform:uppercase}
+.sb-back{background:none;border:1px solid var(--border);color:var(--text3);font-family:var(--mono);font-size:10px;padding:4px 8px;cursor:pointer;letter-spacing:1px;transition:.15s}
+.sb-back:hover{border-color:var(--green-l);color:var(--text)}
+
+/* ── FIX MOBILE SCROLL : sb-body scrollable avec touch ── */
+.sb-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.sb-body::-webkit-scrollbar{width:3px}
+.sb-body::-webkit-scrollbar-track{background:var(--bg2)}
+.sb-body::-webkit-scrollbar-thumb{background:var(--border-l)}
+
+.panel-section{padding:14px 16px;border-bottom:1px solid var(--border)}
+.panel-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.panel-btn{display:block;width:100%;padding:10px 14px;background:var(--olive-d);border:1px solid var(--border-l);color:var(--green-ll);font-family:var(--title);font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;cursor:pointer;text-align:left;margin-bottom:8px;transition:.15s;-webkit-appearance:none}
+.panel-btn:last-child{margin-bottom:0}
+.panel-btn:hover{background:var(--olive);border-color:var(--green-l)}
+.panel-btn.secondary{background:var(--panel2);border-color:var(--border);color:var(--text2)}
+.panel-btn.secondary:hover{background:var(--panel);border-color:var(--green-l);color:var(--text)}
+.panel-btn.danger{background:rgba(192,48,42,.15);border-color:var(--red);color:var(--red-l)}
+.panel-btn.danger:hover{background:rgba(192,48,42,.3)}
+.panel-btn.success{background:rgba(61,107,30,.4);border-color:var(--green-l);color:var(--green-ll)}
+.panel-btn.success:hover{background:rgba(61,107,30,.6)}
+.panel-btn.active-mode{background:var(--green);border-color:var(--green-ll);color:#fff}
+.panel-btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.txt-input{width:100%;background:var(--bg2);border:1px solid var(--border-l);color:var(--text);font-family:var(--title);font-size:14px;padding:8px 10px;outline:none;margin-bottom:8px;-webkit-appearance:none;border-radius:0}
+.txt-input:focus{border-color:var(--green-l)}
+.sel-input{width:100%;background:var(--bg2);border:1px solid var(--border-l);color:var(--text);font-family:var(--title);font-size:13px;padding:8px 10px;outline:none;margin-bottom:8px;-webkit-appearance:none;border-radius:0;cursor:pointer}
+.sel-input:focus{border-color:var(--green-l)}
+.info-box{background:var(--bg2);border-left:3px solid var(--green);padding:8px 10px;font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.6}
+.info-box b{color:var(--green-ll)}
+
+.race-item{background:var(--panel2);border:1px solid var(--border);padding:10px 40px 10px 12px;margin-bottom:6px;cursor:pointer;transition:.15s;position:relative}
+.race-item:hover{border-color:var(--green-l);background:var(--panel)}
+.race-item.selected{border-color:var(--green-ll);background:rgba(61,107,30,.2)}
+.race-name{font-weight:600;font-size:14px;letter-spacing:1px;color:var(--text)}
+.race-meta{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px}
+.race-del{position:absolute;top:50%;right:8px;transform:translateY(-50%);background:none;border:1px solid var(--red);color:var(--red-l);font-size:11px;padding:3px 7px;cursor:pointer;font-family:var(--mono);line-height:1}
+.race-del:hover{background:rgba(192,48,42,.2)}
+
+.cp-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.cp-item:last-child{border-bottom:none}
+.cp-num{font-family:var(--mono);font-size:10px;color:var(--text3);min-width:20px;text-align:right}
+.cp-name{flex:1;font-size:13px;color:var(--text)}
+.cp-dist{font-family:var(--mono);font-size:10px;color:var(--green-ll);white-space:nowrap}
+
+.map-status{position:absolute;bottom:0;left:0;right:0;background:rgba(14,18,8,.9);border-top:1px solid var(--border);padding:6px 12px;font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;gap:16px;z-index:9;flex-wrap:wrap}
+
+.timer-display{font-family:var(--mono);font-size:32px;color:var(--green-ll);text-align:center;padding:12px 0;letter-spacing:4px}
+.timer-sub{text-align:center;font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:-8px;padding-bottom:4px}
+.blink{animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+
+.celebration-overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999}
+.celebration-box{background:var(--panel);border:2px solid var(--green-ll);padding:28px 32px;text-align:center;max-width:340px;width:90%;position:relative}
+.celebration-box::before{content:'';position:absolute;top:-1px;left:20px;right:20px;height:3px;background:var(--green-ll)}
+.celebration-box h2{font-family:var(--title);font-size:24px;color:var(--green-ll);margin-bottom:10px;letter-spacing:2px;text-transform:uppercase}
+.celebration-box p{font-family:var(--mono);font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:16px}
+.celebration-box button{background:var(--olive-d);border:1px solid var(--green-l);color:var(--green-ll);padding:10px 24px;font-family:var(--mono);font-size:12px;cursor:pointer;letter-spacing:2px;text-transform:uppercase;transition:.15s}
+.celebration-box button:hover{background:var(--olive)}
+
+/* ── MOBILE SIDEBAR — FIX : hauteur augmentée + scroll touch ── */
+@media(max-width:720px){
+  #org,#runner{flex-direction:column}
+  .map-area{position:absolute;inset:0;z-index:1}
+  .sidebar{
+    position:absolute;bottom:0;left:0;right:0;
+    width:100%;min-width:unset;
+    max-height:75vh;
+    height:auto;
+    border-right:none;border-top:1px solid var(--border-l);
+    z-index:20;
+    transform:translateY(0);
+    border-radius:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .sidebar .sb-body{
+    flex:1;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+  .sidebar.collapsed{transform:translateY(calc(100% - 72px))}
+  .map-status{left:0;right:0;bottom:44px}
+  .home-title{font-size:44px}
+  .home-card{width:92vw;padding:22px 20px}
+  .home-sub{letter-spacing:3px}
+}
+.sb-pull{width:48px;height:5px;background:var(--border-l);border-radius:3px;margin:10px auto 6px;cursor:pointer;transition:background .2s}
+.sb-pull:active{background:var(--green-l)}
+@media(min-width:721px){.sb-pull{display:none}}
+
+.leaflet-container{background:#151f0c !important;font-family:var(--title)}
+.leaflet-tile-pane{filter:hue-rotate(80deg) saturate(0.45) brightness(0.45)}
+.leaflet-popup-content-wrapper{background:var(--panel);border:1px solid var(--border-l);color:var(--text);border-radius:0;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.leaflet-popup-tip{background:var(--panel)}
+.leaflet-popup-content{font-family:var(--mono);font-size:11px;color:var(--text2);margin:10px 14px}
+.leaflet-popup-content b{color:var(--green-ll)}
+.leaflet-bar a{background:var(--panel) !important;color:var(--green-ll) !important;border-color:var(--border) !important}
+.leaflet-bar a:hover{background:var(--panel2) !important}
+.leaflet-control-attribution{background:rgba(14,18,8,.7) !important;color:var(--text3) !important;font-size:9px}
+.leaflet-control-attribution a{color:var(--text3) !important}
+
+.icon-start{font-size:24px;color:var(--amber-l);line-height:1;text-shadow:0 0 8px rgba(240,192,0,.5)}
+.icon-cp{font-size:20px;color:var(--green-ll);line-height:1}
+.icon-cp-done{font-size:18px;color:var(--text3);line-height:1;opacity:.5}
+.icon-cp-active{font-size:26px;color:var(--amber-l);line-height:1;animation:pulse 1.2s ease-in-out infinite;text-shadow:0 0 12px rgba(240,192,0,.6)}
+.icon-player{font-size:16px;color:#fff;line-height:1}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.8}}
+
+#sat-overlay{position:fixed;inset:0;z-index:9999;pointer-events:none;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .3s}
+#sat-overlay.visible{opacity:1}
+.sat-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%, rgba(0,255,80,.04) 0%, transparent 70%)}
+.sat-frame{position:relative;width:280px;height:280px}
+.sat-ring-outer{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(90,180,60,.35);animation:sat-spin 3s linear infinite}
+.sat-ring-outer::before{content:'';position:absolute;top:-3px;left:50%;transform:translateX(-50%);width:5px;height:5px;background:var(--green-l);border-radius:50%;box-shadow:0 0 8px var(--green-l)}
+.sat-ring-mid{position:absolute;inset:30px;border-radius:50%;border:1px solid rgba(122,184,64,.5);animation:sat-spin-r 2s linear infinite}
+.sat-ring-inner{position:absolute;inset:70px;border-radius:50%;border:2px solid rgba(122,184,64,.7);animation:sat-spin 1.2s linear infinite}
+.sat-ring-inner::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:1px dashed rgba(90,180,60,.3);animation:sat-spin-r 4s linear infinite}
+.sat-cross{position:absolute;inset:0}
+.sat-cross::before,.sat-cross::after{content:'';position:absolute;background:rgba(90,180,60,.3)}
+.sat-cross::before{top:50%;left:10%;right:10%;height:1px;transform:translateY(-50%)}
+.sat-cross::after{left:50%;top:10%;bottom:10%;width:1px;transform:translateX(-50%)}
+.sat-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:10px;height:10px}
+.sat-center::before{content:'';position:absolute;inset:0;border-radius:50%;background:var(--green-ll);box-shadow:0 0 16px var(--green-ll),0 0 32px rgba(122,184,64,.5);animation:sat-ping 1s ease-out infinite}
+.sat-corner{position:absolute;width:20px;height:20px;border-color:var(--green-l);border-style:solid;opacity:.8}
+.sat-c-tl{top:16px;left:16px;border-width:2px 0 0 2px}
+.sat-c-tr{top:16px;right:16px;border-width:2px 2px 0 0}
+.sat-c-bl{bottom:16px;left:16px;border-width:0 0 2px 2px}
+.sat-c-br{bottom:16px;right:16px;border-width:0 2px 2px 0}
+.sat-scan{position:absolute;inset:0;border-radius:50%;overflow:hidden}
+.sat-scan::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(transparent,rgba(90,180,60,.6),transparent);animation:sat-scanline 1.5s ease-in-out infinite;box-shadow:0 0 10px rgba(90,180,60,.4)}
+.sat-label{position:absolute;bottom:-36px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--green-l);letter-spacing:3px;text-transform:uppercase;white-space:nowrap;animation:sat-blink-txt .6s step-end infinite}
+.sat-coords{position:absolute;top:-28px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:2px;white-space:nowrap;opacity:0;transition:opacity .5s}
+.sat-coords.show{opacity:1}
+.sat-sector{position:absolute;inset:70px;border-radius:50%;overflow:hidden}
+.sat-sector::before{content:'';position:absolute;top:50%;left:50%;width:100%;height:100%;background:conic-gradient(from 0deg, rgba(90,180,60,.15) 0deg, rgba(90,180,60,0) 60deg);transform-origin:0 0;animation:sat-spin 1.2s linear infinite}
+@keyframes sat-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes sat-spin-r{from{transform:rotate(360deg)}to{transform:rotate(0deg)}}
+@keyframes sat-ping{0%{transform:scale(1);opacity:1}70%{transform:scale(3);opacity:0}100%{transform:scale(1);opacity:0}}
+@keyframes sat-scanline{0%{top:0%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
+@keyframes sat-blink-txt{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes sat-fadein{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@keyframes sat-fadeout{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.1)}}
+.sat-frame.entering{animation:sat-fadein .4s ease-out forwards}
+.sat-frame.leaving{animation:sat-fadeout .5s ease-in forwards}
+</style>
+</head>
+<body>
+
+<div id="home" class="screen active" role="main">
+  <div class="deco-corner dc-tl" aria-hidden="true"></div>
+  <div class="deco-corner dc-tr" aria-hidden="true"></div>
+  <div class="deco-corner dc-bl" aria-hidden="true"></div>
+  <div class="deco-corner dc-br" aria-hidden="true"></div>
+  <p class="home-logo">Système de navigation terrain · 2026</p>
+  <h1 class="home-title">ORIENT</h1>
+  <p class="home-sub">Course d'orientation</p>
+  <div class="home-card">
+    <div class="home-code-label">Code d'accès</div>
+    <input class="home-input" id="homeCode" type="password" maxlength="6"
+           placeholder="• • • • • •" autocomplete="off" inputmode="numeric" aria-label="Code d'accès">
+    <div class="home-error" id="homeErr" role="alert" aria-live="polite"></div>
+    <div class="home-btns">
+      <button class="btn-entry btn-org" onclick="tryLogin('org')">▲ Organisateur</button>
+      <button class="btn-entry btn-runner" onclick="tryLogin('runner')">◈ Coureur</button>
+    </div>
+    <div class="home-hint">Laisser vide ou entrer un code → Entrée / bouton</div>
+  </div>
+</div>
+
+<div id="org" class="screen" role="main">
+  <div class="sidebar" id="orgSidebar">
+    <div class="sb-pull" onclick="toggleSidebar('orgSidebar')" role="button" tabindex="0"></div>
+    <div class="sb-pull-hint" onclick="toggleSidebar('orgSidebar')">▼ glisser pour voir la carte</div>
+    <div class="sb-header">
+      <span class="sb-title">Organisateur</span>
+      <button class="sb-back" onclick="goHome()">⬅ Quitter</button>
+    </div>
+    <div class="sb-body" id="orgBody"></div>
+  </div>
+  <div class="map-area">
+    <div id="map"></div>
+    <div class="map-status">
+      <span id="orgStatusTxt">Sélectionnez une action dans le panneau</span>
+      <span id="orgCoords" style="margin-left:auto;opacity:.6"></span>
+    </div>
+  </div>
+</div>
+
+<div id="runner" class="screen" role="main">
+  <div class="sidebar" id="runnerSidebar">
+    <div class="sb-pull" onclick="toggleSidebar('runnerSidebar')" role="button" tabindex="0"></div>
+    <div class="sb-pull-hint" onclick="toggleSidebar('runnerSidebar')">▼ glisser pour voir la carte</div>
+    <div class="sb-header">
+      <span class="sb-title">Coureur</span>
+      <button class="sb-back" onclick="goHome()">⬅ Quitter</button>
+    </div>
+    <div class="sb-body" id="runnerBody"></div>
+  </div>
+  <div class="map-area">
+    <div id="map-runner"></div>
+    <div class="map-status">
+      <span id="runnerStatusTxt">Aucune course en cours</span>
+      <span id="runnerGPS" style="margin-left:auto;opacity:.6">GPS: inactif</span>
+    </div>
+  </div>
+</div>
+
+<div id="sat-overlay" aria-hidden="true">
+  <div class="sat-bg"></div>
+  <div class="sat-frame" id="satFrame">
+    <div class="sat-ring-outer"></div>
+    <div class="sat-ring-mid"></div>
+    <div class="sat-scan"></div>
+    <div class="sat-ring-inner"></div>
+    <div class="sat-sector"></div>
+    <div class="sat-cross"></div>
+    <div class="sat-corner sat-c-tl"></div>
+    <div class="sat-corner sat-c-tr"></div>
+    <div class="sat-corner sat-c-bl"></div>
+    <div class="sat-corner sat-c-br"></div>
+    <div class="sat-center"></div>
+    <div class="sat-coords" id="satCoords">---.------ / ---.------</div>
+    <div class="sat-label">ACQUISITION GPS…</div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  SATELLITE ANIMATION
+// ═══════════════════════════════════════════════════════
+let _satTimer = null;
+function showSatAnimation(lat, lon) {
+  const overlay = document.getElementById('sat-overlay');
+  const frame = document.getElementById('satFrame');
+  const coordsEl = document.getElementById('satCoords');
+  if (!overlay || !frame) return;
+  if (lat != null && lon != null) {
+    coordsEl.textContent = lat.toFixed(5) + ' / ' + lon.toFixed(5);
+    setTimeout(() => coordsEl.classList.add('show'), 600);
+  } else {
+    coordsEl.textContent = 'RECHERCHE SIGNAL…';
+  }
+  frame.classList.remove('leaving');
+  frame.classList.add('entering');
+  overlay.classList.add('visible');
+  if (_satTimer) clearTimeout(_satTimer);
+  _satTimer = setTimeout(() => hideSatAnimation(), 2800);
+}
+function hideSatAnimation() {
+  const overlay = document.getElementById('sat-overlay');
+  const frame = document.getElementById('satFrame');
+  const coordsEl = document.getElementById('satCoords');
+  if (!overlay) return;
+  frame.classList.remove('entering');
+  frame.classList.add('leaving');
+  coordsEl.classList.remove('show');
+  setTimeout(() => { overlay.classList.remove('visible'); }, 500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  SUPABASE
+// ═══════════════════════════════════════════════════════
+const SUPA_URL = 'https://tzhyqcpkkuiwzkmtacgn.supabase.co';
+const SUPA_KEY = 'sb_publishable_N3F9ShO-KCdSzF-PIpS_Aw_1vs0T8pY';
+let supaRealtime = null;
+
+async function supaFetch(method, path, body) {
+  const res = await fetch(SUPA_URL + '/rest/v1/' + path, {
+    method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation,resolution=merge-duplicates' : ''
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(t); }
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+async function supaSessionSave(session) {
+  await supaFetch('POST', 'duel_sessions?on_conflict=id', {
+    id: session.id, race_idx: session.raceIdx, players: session.players,
+    started: session.started, start_time: session.startTime
+  });
+}
+
+async function supaSessionUpdate(id, patch) {
+  await supaFetch('PATCH', 'duel_sessions?id=eq.' + id, patch);
+}
+
+async function supaSessionLoad(id) {
+  const rows = await supaFetch('GET', 'duel_sessions?id=eq.' + id + '&select=*');
+  if (!rows || !rows.length) return null;
+  const r = rows[0];
+  return { id:r.id, raceIdx:r.race_idx, players:r.players, started:r.started, startTime:r.start_time };
+}
+
+async function supaRacesSave() {
+  await supaFetch('DELETE', 'races?id=neq.00000000-0000-0000-0000-000000000000');
+  for (const race of races) {
+    await supaFetch('POST', 'races', { data: race });
+  }
+}
+
+async function supaRacesLoad() {
+  const rows = await supaFetch('GET', 'races?select=*&order=created_at.asc');
+  return rows ? rows.map(r => r.data) : [];
+}
+
+function supaSubscribe(sessionId, onUpdate) {
+  supaUnsubscribe();
+  const wsUrl = SUPA_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0';
+  supaRealtime = new WebSocket(wsUrl);
+  supaRealtime.onopen = () => {
+    supaRealtime.send(JSON.stringify({ topic:'realtime:public:duel_sessions:id=eq.'+sessionId, event:'phx_join', payload:{config:{broadcast:{self:true}}}, ref:'1' }));
+  };
+  supaRealtime.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.event==='UPDATE' && msg.payload && msg.payload.record) {
+        const r = msg.payload.record;
+        onUpdate({ id:r.id, raceIdx:r.race_idx, players:r.players, started:r.started, startTime:r.start_time });
+      }
+    } catch(err) {}
+  };
+}
+
+function supaUnsubscribe() {
+  if (supaRealtime) { try { supaRealtime.close(); } catch(e) {} supaRealtime = null; }
+}
+
+let CODES = { org: '4444', runner: '1234' };
+try { const saved = JSON.parse(localStorage.getItem('orient_codes')); if(saved && saved.org && saved.runner) CODES = saved; } catch(e) {}
+function saveCodes() { try { localStorage.setItem('orient_codes', JSON.stringify(CODES)); } catch(e) {} }
+const R_EARTH = 6371000;
+const CP_VALIDATE_RADIUS = 15;
+const START_RADIUS = 20;
+
+let races = [];
+try { races = JSON.parse(localStorage.getItem('orient_races') || '[]'); } catch(e) { races = []; }
+
+let orgMap = null, runMap = null;
+let orgState = { mode: null, currentRace: null, markers: [], polyline: null };
+let runState = { race: null, cpIdx: 0, startTime: null, watchId: null, elapsed: 0, timerInt: null, skipped: [] };
+let runMarkers = [], playerMarker = null;
+
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+function saveRaces() {
+  try { localStorage.setItem('orient_races', JSON.stringify(races)); } catch(e) {}
+  supaRacesSave().catch(e => console.warn('Supabase save races:', e));
+}
+
+function dist(a, b) {
+  const dLat = (b[0]-a[0]) * Math.PI/180;
+  const dLon = (b[1]-a[1]) * Math.PI/180;
+  const la = a[0] * Math.PI/180, lb = b[0] * Math.PI/180;
+  const x = Math.sin(dLat/2)**2 + Math.cos(la)*Math.cos(lb)*Math.sin(dLon/2)**2;
+  return 2 * R_EARTH * Math.asin(Math.sqrt(x));
+}
+function totalDist(pts) { let d=0; for(let i=1;i<pts.length;i++) d+=dist(pts[i-1],pts[i]); return d; }
+function calcRaceDist(r) { const pts=[r.start,...r.checkpoints.map(c=>c.ll)].filter(Boolean); return totalDist(pts); }
+function fmtDist(m) { return m<1000 ? Math.round(m)+' m' : (m/1000).toFixed(2)+' km'; }
+function fmtTime(s) { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; if(h>0) return h+'h '+(m<10?'0':'')+m+'min'; return m+'min '+(sec<10?'0':'')+sec+'s'; }
+function mkIcon(html, size=28) { return L.divIcon({ className:'', html, iconSize:[size,size], iconAnchor:[size/2,size/2] }); }
+
+// ═══════════════════════════════════════════════════════
+//  AUTH / NAVIGATION
+// ═══════════════════════════════════════════════════════
+function tryLogin(role) {
+  const v = document.getElementById('homeCode').value;
+  if (!v) { document.getElementById('homeErr').textContent = '✕ Entrez un code d\'accès'; return; }
+  if (v === CODES[role]) {
+    document.getElementById('homeErr').textContent = '';
+    document.getElementById('homeCode').value = '';
+    if (role === 'org') openOrg(); else openRunner();
+  } else {
+    document.getElementById('homeErr').textContent = '✕ Code incorrect';
+    document.getElementById('homeCode').value = '';
+  }
+}
+document.getElementById('homeCode').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const v = document.getElementById('homeCode').value;
+    if (!v) { document.getElementById('homeErr').textContent = '✕ Entrez un code d\'accès'; return; }
+    if (v === CODES.org) tryLogin('org');
+    else if (v === CODES.runner) tryLogin('runner');
+    else { document.getElementById('homeErr').textContent = '✕ Code incorrect'; document.getElementById('homeCode').value=''; }
+  }
+});
+function goHome() {
+  stopRunnerTimer();
+  if (runState.watchId) { navigator.geolocation.clearWatch(runState.watchId); runState.watchId=null; }
+  removeOverlay();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('home').classList.add('active');
+}
+function toggleSidebar(id) { document.getElementById(id).classList.toggle('collapsed'); }
+function setScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════
+//  ORGANISATEUR
+// ═══════════════════════════════════════════════════════
+function openOrg() {
+  setScreen('org');
+  // Charger les courses depuis Supabase
+  supaRacesLoad().then(remote => {
+    if (remote && remote.length) {
+      races = remote;
+      try { localStorage.setItem('orient_races', JSON.stringify(races)); } catch(e) {}
+    }
+    renderOrgPanel();
+  }).catch(() => renderOrgPanel());
+  setTimeout(() => {
+    if (!orgMap) {
+      orgMap = L.map('map', { zoomControl: true }).setView([46.5, 2.5], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors', maxZoom:19 }).addTo(orgMap);
+      orgMap.on('click', orgMapClick);
+      orgMap.on('mousemove', e => { document.getElementById('orgCoords').textContent = e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5); });
+      if (navigator.geolocation) {
+        showSatAnimation(null, null);
+        navigator.geolocation.getCurrentPosition(p => {
+          if (_satTimer) clearTimeout(_satTimer);
+          showSatAnimation(p.coords.latitude, p.coords.longitude);
+          orgMap.setView([p.coords.latitude, p.coords.longitude], 14);
+        }, () => { hideSatAnimation(); });
+      }
+    } else { orgMap.invalidateSize(); }
+  }, 120);
+}
+
+function orgMapClick(e) {
+  const ll = [e.latlng.lat, e.latlng.lng];
+  if (orgState.mode === 'place-start') {
+    orgState.currentRace.start = ll;
+    orgState.mode = 'place-cp';
+    redrawOrgMap(); setOrgStatus('Départ ▲ placé — nommez et placez vos balises'); renderOrgPanel();
+  } else if (orgState.mode === 'place-cp') {
+    const nameEl = document.getElementById('cpNameInput');
+    const name = (nameEl && nameEl.value.trim()) || ('Balise '+(orgState.currentRace.checkpoints.length+1));
+    orgState.currentRace.checkpoints.push({ name, ll });
+    if (nameEl) nameEl.value = '';
+    redrawOrgMap(); setOrgStatus('"'+name+'" placée — '+orgState.currentRace.checkpoints.length+' balise(s)'); renderOrgPanel();
+    setTimeout(() => { const el=document.getElementById('cpNameInput'); if(el) el.focus(); }, 100);
+  }
+}
+
+function clearOrgMap() {
+  orgState.markers.forEach(m => { try { orgMap.removeLayer(m); } catch(e) {} });
+  orgState.markers = [];
+  if (orgState.polyline) { orgMap.removeLayer(orgState.polyline); orgState.polyline=null; }
+}
+
+function redrawOrgMap() {
+  clearOrgMap();
+  const r = orgState.currentRace;
+  if (!r) return;
+  const pts = [r.start,...r.checkpoints.map(c=>c.ll)].filter(Boolean);
+  if (pts.length>1) {
+    orgState.polyline = L.polyline(pts, {color:'#7ab840',weight:2,dashArray:'8,5',opacity:.65}).addTo(orgMap);
+    orgState.markers.push(orgState.polyline);
+  }
+  if (r.start) {
+    const m = L.marker(r.start, {icon:mkIcon('<div class="icon-start">▲</div>'), draggable:orgState.editing}).addTo(orgMap);
+    m.bindPopup('<b>Départ</b>');
+    if (orgState.editing) m.on('dragend', e => { r.start=[e.target.getLatLng().lat,e.target.getLatLng().lng]; redrawOrgMap(); });
+    orgState.markers.push(m);
+  }
+  r.checkpoints.forEach((cp, i) => {
+    const m = L.marker(cp.ll, {icon:mkIcon('<div class="icon-cp">◈</div>',24), draggable:orgState.editing}).addTo(orgMap);
+    m.bindPopup('<b>'+cp.name+'</b><br><span style="color:var(--text3)">Balise '+(i+1)+'</span>');
+    if (orgState.editing) m.on('dragend', e => { cp.ll=[e.target.getLatLng().lat,e.target.getLatLng().lng]; redrawOrgMap(); });
+    orgState.markers.push(m);
+  });
+}
+
+function setOrgStatus(t) { document.getElementById('orgStatusTxt').textContent = t; }
+
+function renderOrgPanel() {
+  const b = document.getElementById('orgBody');
+  const m = orgState.mode;
+  if (!m || m==='home') renderOrgHome(b);
+  else if (m==='create') renderCreateName(b);
+  else if (['place-start','place-cp','edit'].includes(m)) renderBuildPanel(b);
+  else if (m==='auto'||m==='auto-start') renderAutoPanel(b);
+  else if (m==='settings') renderSettingsPanel(b);
+}
+
+function renderOrgHome(b) {
+  b.innerHTML = `
+    <div class="panel-section">
+      <button class="panel-btn" onclick="startCreate()">+ Créer une course</button>
+      <button class="panel-btn secondary" onclick="startAuto()">⚙ Course automatique</button>
+      <button class="panel-btn secondary" onclick="orgState.mode='settings';renderOrgPanel()">⚙ Paramètres</button>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">Courses enregistrées (${races.length})</div>
+      ${renderRaceListManage()}
+    </div>`;
+}
+
+function renderRaceListManage() {
+  if (!races.length) return '<div class="info-box" style="color:var(--text3)">Aucune course enregistrée</div>';
+  return races.map((r,i) => `
+    <div class="race-item" style="padding-right:12px">
+      <div class="race-name">${r.name}</div>
+      <div class="race-meta">${fmtDist(calcRaceDist(r))} · ${r.checkpoints.length} balise(s)</div>
+      <div style="display:flex;gap:6px;margin-top:7px">
+        <button class="panel-btn secondary" style="flex:1;margin:0;padding:6px 8px;font-size:11px" onclick="editRace(${i})">✦ Modifier</button>
+        <button class="panel-btn danger" style="flex:1;margin:0;padding:6px 8px;font-size:11px" onclick="deleteRace(${i},event)">✕ Supprimer</button>
+      </div>
+    </div>`).join('');
+}
+
+function startCreate() {
+  orgState.currentRace={name:'',start:null,checkpoints:[]};
+  orgState.mode='create'; orgState.editing=false; clearOrgMap(); renderOrgPanel();
+}
+
+function renderCreateName(b) {
+  b.innerHTML = `
+    <div class="panel-section">
+      <div class="panel-label">Nom de la course</div>
+      <input class="txt-input" id="raceNameIn" placeholder="ex: Forêt des Aulnes" autofocus>
+      <button class="panel-btn" onclick="confirmName()">▶ Valider — Placer le départ</button>
+      <button class="panel-btn secondary" onclick="cancelEdit()">✕ Annuler</button>
+    </div>`;
+  setTimeout(() => { const el=document.getElementById('raceNameIn'); if(el) el.focus(); }, 50);
+}
+
+function confirmName() {
+  const v = document.getElementById('raceNameIn')?.value.trim();
+  if (!v) { alert('Entrez un nom pour la course'); return; }
+  orgState.currentRace.name=v; orgState.mode='place-start';
+  setOrgStatus('Cliquez sur la carte pour placer le départ ▲'); renderOrgPanel();
+}
+
+function renderBuildPanel(b) {
+  const r = orgState.currentRace;
+  const pts = [r.start,...r.checkpoints.map(c=>c.ll)].filter(Boolean);
+  const td = totalDist(pts);
+  let segHtml='';
+  if (r.start && r.checkpoints.length) {
+    let cumul=0;
+    r.checkpoints.forEach((cp,i) => {
+      const prev = i===0 ? r.start : r.checkpoints[i-1].ll;
+      cumul += dist(prev, cp.ll);
+      segHtml += `
+        <div class="cp-item" id="cp-row-${i}" style="padding:6px 0;align-items:center;gap:6px">
+          <span class="cp-num">${i+1}</span>
+          <span class="cp-name" id="cp-label-${i}" style="flex:1;cursor:pointer;border-bottom:1px dashed var(--border-l)" onclick="startRenameCp(${i})">${cp.name}</span>
+          <span class="cp-dist" style="font-size:10px">${fmtDist(cumul)}</span>
+          <button onclick="deleteCp(${i})" style="background:none;border:1px solid var(--red);color:var(--red-l);font-family:var(--mono);font-size:10px;padding:2px 6px;cursor:pointer">✕</button>
+        </div>`;
+    });
+  }
+  b.innerHTML = `
+    <div class="panel-section">
+      <div class="panel-label">Course : <span style="color:var(--green-ll)">${r.name}</span></div>
+      ${orgState.mode==='place-start'?'<div class="info-box">▲ Cliquez sur la carte pour placer le départ</div>':''}
+    </div>
+    ${orgState.mode!=='place-start'?`
+    <div class="panel-section">
+      <div class="panel-label">Ajouter une balise</div>
+      <input class="txt-input" id="cpNameInput" placeholder="Nom de la balise (optionnel)">
+      <button class="panel-btn ${orgState.mode==='place-cp'?'active-mode':'secondary'}" onclick="setMode('place-cp')">◈ Mode placement</button>
+      <button class="panel-btn ${orgState.mode==='edit'?'active-mode':'secondary'}" onclick="setEditMode()">✦ Mode déplacement</button>
+    </div>`:''}
+    ${r.checkpoints.length?`
+    <div class="panel-section">
+      <div class="panel-label">Balises · ${fmtDist(td)}</div>
+      ${segHtml}
+    </div>`:''}
+    <div class="panel-section">
+      <button class="panel-btn success" onclick="finishRace()">✓ Course terminée</button>
+      <button class="panel-btn danger" onclick="cancelEdit()">✕ Annuler</button>
+    </div>`;
+}
+
+function startRenameCp(i) {
+  const cp = orgState.currentRace.checkpoints[i];
+  const labelEl = document.getElementById(`cp-label-${i}`);
+  if (!labelEl) return;
+  labelEl.outerHTML = `<input id="cp-rename-${i}" class="txt-input" style="flex:1;margin:0;padding:4px 6px;font-size:13px" value="${cp.name}"
+    onblur="confirmRenameCp(${i})"
+    onkeydown="if(event.key==='Enter')confirmRenameCp(${i});if(event.key==='Escape')confirmRenameCp(${i})" autofocus>`;
+  setTimeout(() => { const inp=document.getElementById(`cp-rename-${i}`); if(inp){inp.focus();inp.select();} }, 10);
+}
+function confirmRenameCp(i) {
+  const inp = document.getElementById(`cp-rename-${i}`);
+  if (!inp) return;
+  const val = inp.value.trim();
+  if (val) orgState.currentRace.checkpoints[i].name=val;
+  redrawOrgMap(); renderBuildPanel(document.getElementById('orgBody'));
+}
+function deleteCp(i) {
+  if (!confirm(`Supprimer la balise "${orgState.currentRace.checkpoints[i].name}" ?`)) return;
+  orgState.currentRace.checkpoints.splice(i,1); redrawOrgMap();
+  renderBuildPanel(document.getElementById('orgBody'));
+  setOrgStatus(`Balise supprimée — ${orgState.currentRace.checkpoints.length} balise(s) restante(s)`);
+}
+function setMode(m) { orgState.mode=m; orgState.editing=false; redrawOrgMap(); renderOrgPanel(); }
+function setEditMode() { orgState.mode='edit'; orgState.editing=true; redrawOrgMap(); renderOrgPanel(); setOrgStatus('Glissez les balises pour les repositionner'); }
+
+function finishRace() {
+  const r = orgState.currentRace;
+  if (!r.start) { alert('Placez d\'abord le départ'); return; }
+  if (!r.checkpoints.length) { alert('Ajoutez au moins une balise'); return; }
+  if (orgState._editingIndex !== undefined) {
+    races[orgState._editingIndex]=r; orgState._editingIndex=undefined;
+  } else { races.push(r); }
+  saveRaces(); orgState.currentRace=null; orgState.mode='home'; orgState.editing=false;
+  clearOrgMap(); setOrgStatus('Course "'+r.name+'" enregistrée !'); renderOrgPanel();
+}
+function cancelEdit() { orgState.currentRace=null; orgState.mode='home'; orgState.editing=false; clearOrgMap(); renderOrgPanel(); }
+function deleteRace(i,e) { if(e) e.stopPropagation(); if(confirm('Supprimer "'+races[i].name+'" ?')) { races.splice(i,1); saveRaces(); renderOrgPanel(); } }
+function editRace(i) {
+  orgState.currentRace=JSON.parse(JSON.stringify(races[i]));
+  orgState._editingIndex=i; orgState.mode='place-cp'; orgState.editing=false;
+  clearOrgMap(); redrawOrgMap();
+  const pts=[orgState.currentRace.start,...orgState.currentRace.checkpoints.map(c=>c.ll)].filter(Boolean);
+  if (pts.length>1) orgMap.fitBounds(L.latLngBounds(pts),{padding:[40,40]});
+  setOrgStatus('Modification de "'+orgState.currentRace.name+'"'); renderOrgPanel();
+}
+
+function renderSettingsPanel(b) {
+  b.innerHTML = `
+    <div class="panel-section">
+      <div class="panel-label">Paramètres</div>
+      <button class="panel-btn secondary" onclick="orgState.mode='home';renderOrgPanel()">← Retour</button>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">Changer le code organisateur</div>
+      <input class="txt-input" id="newOrgCode" type="password" placeholder="Nouveau code" maxlength="8" inputmode="numeric">
+      <input class="txt-input" id="newOrgCode2" type="password" placeholder="Confirmer" maxlength="8" inputmode="numeric">
+      <button class="panel-btn" onclick="changeCode('org')">✓ Valider</button>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">Changer le code coureur</div>
+      <input class="txt-input" id="newRunCode" type="password" placeholder="Nouveau code" maxlength="8" inputmode="numeric">
+      <input class="txt-input" id="newRunCode2" type="password" placeholder="Confirmer" maxlength="8" inputmode="numeric">
+      <button class="panel-btn secondary" onclick="changeCode('runner')">✓ Valider</button>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">Codes actuels</div>
+      <div class="info-box">Organisateur : <b>${CODES.org}</b><br>Coureur : <b>${CODES.runner}</b></div>
+    </div>`;
+}
+function changeCode(role) {
+  const a = role==='org' ? document.getElementById('newOrgCode')?.value : document.getElementById('newRunCode')?.value;
+  const b2 = role==='org' ? document.getElementById('newOrgCode2')?.value : document.getElementById('newRunCode2')?.value;
+  if (!a||a.length<1) { alert('Entrez un code'); return; }
+  if (a!==b2) { alert('Les deux codes ne correspondent pas'); return; }
+  CODES[role]=a; saveCodes(); alert('Code mis à jour : '+a); renderSettingsPanel(document.getElementById('orgBody'));
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUTO RACE
+// ═══════════════════════════════════════════════════════
+function startAuto() {
+  orgState.mode='auto'; orgState.currentRace={name:'',start:null,checkpoints:[]}; orgState.editing=false;
+  clearOrgMap(); renderOrgPanel(); setOrgStatus('Configurez et placez le départ de la course automatique');
+}
+function renderAutoPanel(b) {
+  const r = orgState.currentRace;
+  b.innerHTML = `
+    <div class="panel-section">
+      <div class="panel-label">Course automatique</div>
+      <input class="txt-input" id="autoName" placeholder="Nom de la course" value="${r.name}">
+      <div class="panel-label">Nombre de balises</div>
+      <input class="txt-input" id="autoNb" type="number" min="1" max="30" value="5" inputmode="numeric">
+      <div class="panel-label">Rayon de répartition (m)</div>
+      <input class="txt-input" id="autoRadius" type="number" min="100" value="800" inputmode="numeric">
+    </div>
+    <div class="panel-section">
+      ${!r.start
+        ? `<button class="panel-btn" onclick="setAutoStartMode()">▲ Placer le départ sur la carte</button>`
+        : `<div class="info-box">Départ placé ✓</div>
+           <button class="panel-btn" onclick="generateAuto()">⚙ Générer le parcours</button>`}
+      <button class="panel-btn danger" onclick="cancelEdit()">✕ Annuler</button>
+    </div>
+    ${r.checkpoints.length?`
+    <div class="panel-section">
+      <div class="panel-label">Parcours généré · ${fmtDist(calcRaceDist(r))}</div>
+      ${r.checkpoints.map((cp,i)=>`<div class="cp-item"><span class="cp-num">${i+1}</span><span class="cp-name">${cp.name}</span></div>`).join('')}
+      <button class="panel-btn success" style="margin-top:10px" onclick="finishRace()">✓ Enregistrer la course</button>
+    </div>`:''}`;
+}
+function setAutoStartMode() {
+  orgState.mode='auto-start'; setOrgStatus('Cliquez sur la carte pour placer le départ ▲');
+  orgMap.once('click', e => {
+    orgState.currentRace.name=document.getElementById('autoName')?.value.trim()||'Course auto';
+    orgState.currentRace.start=[e.latlng.lat,e.latlng.lng];
+    orgState.mode='auto'; clearOrgMap(); redrawOrgMap();
+    setOrgStatus('Départ placé — configurez et générez le parcours'); renderOrgPanel();
+  });
+}
+async function generateAuto() {
+  const r=orgState.currentRace;
+  r.name=document.getElementById('autoName')?.value.trim()||'Course auto';
+  const nb=Math.max(1,parseInt(document.getElementById('autoNb')?.value)||5);
+  const radius=Math.max(100,parseFloat(document.getElementById('autoRadius')?.value)||800);
+  setOrgStatus('⏳ Recherche des chemins piétons…');
+  try {
+    const bbox_margin=(radius*1.5)/R_EARTH*(180/Math.PI);
+    const lat=r.start[0],lon=r.start[1];
+    const bbox=`${lat-bbox_margin},${lon-bbox_margin},${lat+bbox_margin},${lon+bbox_margin}`;
+    const query=`[out:json][timeout:15];(way["highway"~"footway|path|track|bridleway|pedestrian|steps|cycleway|service|residential|unclassified|tertiary|secondary"](${bbox});way["foot"~"yes|designated|permissive"](${bbox}););out geom;`;
+    const resp=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(query)});
+    if (!resp.ok) throw new Error('Overpass API inaccessible');
+    const data=await resp.json();
+    const candidates=[];
+    for (const way of data.elements) {
+      if (!way.geometry) continue;
+      for (const node of way.geometry) {
+        const d=dist([lat,lon],[node.lat,node.lon]);
+        if (d>=radius*0.2&&d<=radius) candidates.push([node.lat,node.lon]);
+      }
+    }
+    if (candidates.length<nb) throw new Error('Pas assez de chemins trouvés. Essayez un rayon plus grand.');
+    const selected=[];
+    const sectorSize=(2*Math.PI)/nb;
+    for (let i=0;i<nb;i++) {
+      const targetAngle=i*sectorSize+(Math.random()-.5)*sectorSize*.5;
+      let best=null,bestScore=Infinity;
+      for (const c of candidates) {
+        const angle=Math.atan2(c[1]-lon,c[0]-lat);
+        let angleDiff=Math.abs(angle-targetAngle);
+        if (angleDiff>Math.PI) angleDiff=2*Math.PI-angleDiff;
+        const d=dist([lat,lon],c);
+        const distScore=Math.abs(d-radius*.65)/radius;
+        const score=angleDiff*2+distScore;
+        let tooClose=false;
+        for (const s of selected) { if(dist(s,c)<radius*.15){tooClose=true;break;} }
+        if (!tooClose&&score<bestScore) { bestScore=score; best=c; }
+      }
+      if (!best) { for(const c of candidates){let tc=false;for(const s of selected){if(dist(s,c)<radius*.08){tc=true;break;}}if(!tc){best=c;break;}} }
+      if (best) selected.push(best);
+    }
+    if (!selected.length) throw new Error('Impossible de placer les balises.');
+    r.checkpoints=selected.map((ll,i)=>({name:'Balise '+(i+1),ll}));
+    clearOrgMap(); redrawOrgMap();
+    orgMap.fitBounds(L.latLngBounds([r.start,...r.checkpoints.map(c=>c.ll)]),{padding:[40,40]});
+    setOrgStatus('✓ '+r.checkpoints.length+' balises placées · '+fmtDist(calcRaceDist(r)));
+    renderOrgPanel();
+  } catch(err) {
+    setOrgStatus('✕ Erreur : '+err.message);
+    const doFallback=confirm('Impossible d\'accéder aux données cartographiques.\nGénérer un parcours aléatoire ?');
+    if (doFallback) generateAutoFallback(r,nb,radius);
+  }
+}
+function generateAutoFallback(r,nb,radius) {
+  r.checkpoints=[];
+  for (let i=0;i<nb;i++) {
+    const angle=(2*Math.PI*i/nb)+(Math.random()-.5)*(Math.PI/nb)*2;
+    const rDist=radius*(0.4+Math.random()*0.6);
+    const dLat=rDist*Math.cos(angle)/R_EARTH*(180/Math.PI);
+    const dLon=rDist*Math.sin(angle)/(R_EARTH*Math.cos(r.start[0]*Math.PI/180))*(180/Math.PI);
+    r.checkpoints.push({name:'Balise '+(i+1),ll:[r.start[0]+dLat,r.start[1]+dLon]});
+  }
+  clearOrgMap(); redrawOrgMap();
+  orgMap.fitBounds(L.latLngBounds([r.start,...r.checkpoints.map(c=>c.ll)]),{padding:[40,40]});
+  setOrgStatus('⚠ Parcours aléatoire · '+fmtDist(calcRaceDist(r))); renderOrgPanel();
+}
+
+// ═══════════════════════════════════════════════════════
+//  COUREUR
+// ═══════════════════════════════════════════════════════
+let geoReady=false, playerLat=null, playerLon=null;
+let runnerMode=null;
+
+// ── DUEL STATE ──
+let duelSession=null, myAgentIdx=null, duelSyncInterval=null, duelChannel=null;
+const DUEL_KEY='orient_duel';
+const DUEL_POLL_MS=800;
+
+// ── DUEL SETUP : supporte N agents ──
+let duelSetup={ step:'names', names:['',''] };
+
+function openRunner() {
+  setScreen('runner'); runnerMode=null;
+  supaRacesLoad().then(remote => {
+    if (remote && remote.length) {
+      races = remote;
+      try { localStorage.setItem('orient_races', JSON.stringify(races)); } catch(e) {}
+    }
+    renderRunnerPanel();
+  }).catch(() => renderRunnerPanel());
+  setTimeout(() => {
+    if (!runMap) {
+      runMap=L.map('map-runner',{zoomControl:true}).setView([46.5,2.5],6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:19}).addTo(runMap);
+    } else { runMap.invalidateSize(); }
+  }, 120);
+}
+
+function renderRunnerPanel() {
+  const b=document.getElementById('runnerBody');
+  if (!runnerMode) { renderModeSelect(b); return; }
+  if (runnerMode==='solo') {
+    if (!runState.race) renderRunnerSelectRace(b);
+    else if (!runState.startTime) renderRunnerPreStart(b);
+    else renderRunnerActive(b);
+  } else { renderDuelPanel(b); }
+}
+
+function renderModeSelect(b) {
+  b.innerHTML=`
+    <div class="panel-section">
+      <div class="panel-label">Type de mission</div>
+      <button class="panel-btn" onclick="chooseSolo()" style="margin-bottom:12px;padding:16px 14px">
+        <span style="font-size:18px;display:block;margin-bottom:4px">◈ COURSE SOLO</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3);font-weight:400">Parcourir un circuit en autonomie</span>
+      </button>
+      <button class="panel-btn secondary" onclick="chooseDuel()" style="padding:16px 14px;border-color:var(--amber);color:var(--amber-l)">
+        <span style="font-size:18px;display:block;margin-bottom:4px">⚔ MODE DUEL</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3);font-weight:400">Affrontement entre agents</span>
+      </button>
+    </div>`;
+}
+function chooseSolo() { runnerMode='solo'; renderRunnerPanel(); }
+
+// ═══════════════════════════════════════════════════════
+//  DUEL — CONFIG PANEL (FIX : Votre identité + agents dynamiques)
+// ═══════════════════════════════════════════════════════
+function chooseDuel() {
+  runnerMode='duel'; duelSession=null; myAgentIdx=null;
+  duelSetup={ step:'names', names:['',''] };
+  const b=document.getElementById('runnerBody');
+  b.innerHTML=`
+    <div class="panel-section">
+      <div class="panel-label" style="color:var(--amber-l)">⚔ MODE DUEL</div>
+      <button class="panel-btn" onclick="duelSetup.step='names';renderRunnerPanel()" style="padding:16px;margin-bottom:12px;border-color:var(--amber);color:var(--amber-l);background:rgba(200,160,0,.12)">
+        <span style="font-size:16px;display:block;margin-bottom:4px">+ CRÉER UNE SESSION</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Configurer et inviter l'adversaire</span>
+      </button>
+      <button class="panel-btn secondary" onclick="renderDuelJoinPanel(document.getElementById('runnerBody'))" style="padding:16px">
+        <span style="font-size:16px;display:block;margin-bottom:4px">→ REJOINDRE UNE SESSION</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Vous êtes agent adversaire</span>
+      </button>
+    </div>
+    <div class="panel-section">
+      <button class="panel-btn secondary" onclick="runnerMode=null;renderRunnerPanel()">← Retour</button>
+    </div>`;
+}
+
+function renderDuelPanel(b) {
+  if (!duelSession) renderDuelSetup(b);
+  else if (!duelSession.started) renderDuelLobby(b);
+  else renderDuelActive(b);
+}
+
+function renderDuelSetup(b) {
+  if (duelSetup.step==='names') {
+    b.innerHTML=`
+      <div class="panel-section">
+        <div class="panel-label" style="color:var(--amber-l);border-bottom:1px solid var(--amber);padding-bottom:6px;margin-bottom:12px">⚔ MODE DUEL — CONFIGURATION</div>
+        <div class="panel-label">Géolocalisation requise</div>
+        <button class="panel-btn secondary" id="geoBtn" onclick="startGeo()">▶ Activer le GPS</button>
+        <div class="info-box" id="geoStatus" style="display:none"></div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-label">Votre identité <span style="font-size:9px;color:var(--text3);letter-spacing:1px">— CET APPAREIL</span></div>
+        <input class="txt-input" id="duelName0" placeholder="Ex: GHOST, FALCON…" value="${duelSetup.names[0]}" maxlength="12">
+        <div class="info-box" style="margin-top:4px">Les autres agents rejoindront avec le code de session.</div>
+      </div>
+      <div class="panel-section">
+        <button class="panel-btn" onclick="duelGoSelectRace()" style="border-color:var(--amber);color:var(--amber-l);background:rgba(200,160,0,.12)">▶ Suivant — Choisir le parcours</button>
+        <button class="panel-btn secondary" style="margin-top:6px" onclick="runnerMode=null;renderRunnerPanel()">← Retour</button>
+      </div>`;
+  } else if (duelSetup.step==='race') {
+    b.innerHTML=`
+      <div class="panel-section">
+        <div class="panel-label" style="color:var(--amber-l)">⚔ DUEL — PARCOURS</div>
+        ${races.length
+          ? `<select class="sel-input" id="duelRaceSelect">${races.map((r,i)=>`<option value="${i}">${r.name} — ${r.checkpoints.length} balises</option>`).join('')}</select>`
+          : '<div class="info-box" style="color:var(--red-l)">Aucune course disponible.</div>'}
+      </div>
+      <div class="panel-section">
+        <div class="info-box" style="border-color:var(--amber)">
+          <b>Règle du duel :</b><br>Chaque agent reçoit les mêmes balises dans un ordre différent. Le premier à toutes les trouver gagne.
+        </div>
+        ${races.length?`<button class="panel-btn" onclick="duelCreateSession()" style="border-color:var(--amber);color:var(--amber-l);background:rgba(200,160,0,.12)">⚔ Créer la session de duel</button>`:''}
+        <button class="panel-btn secondary" style="margin-top:6px" onclick="duelSetup.step='names';renderRunnerPanel()">← Retour</button>
+      </div>`;
+  }
+}
+
+// Génère les inputs pour les agents adversaires (index 1+)
+function renderDuelAgentInputs() {
+  return duelSetup.names.slice(1).map((name,i) => {
+    const idx=i+1;
+    return `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px" id="duelAgentRow${idx}">
+      <input class="txt-input" id="duelName${idx}" placeholder="Ex: WOLF, ECHO…" value="${name}" maxlength="12" style="flex:1;margin:0">
+      <button onclick="duelRemoveAgent(${idx})" style="background:none;border:1px solid var(--red);color:var(--red-l);font-family:var(--mono);font-size:11px;padding:7px 10px;cursor:pointer;flex-shrink:0">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function duelSaveCurrentNames() {
+  const n0=document.getElementById('duelName0')?.value.trim();
+  if (n0!==undefined) duelSetup.names[0]=n0;
+  duelSetup.names.slice(1).forEach((_,i) => {
+    const val=document.getElementById('duelName'+(i+1))?.value.trim();
+    if (val!==undefined) duelSetup.names[i+1]=val;
+  });
+}
+
+function duelAddAgent() {
+  duelSaveCurrentNames();
+  duelSetup.names.push('');
+  const list=document.getElementById('duelAgentList');
+  if (list) list.innerHTML=renderDuelAgentInputs();
+  // Focus le nouvel input
+  setTimeout(()=>{ const el=document.getElementById('duelName'+(duelSetup.names.length-1)); if(el) el.focus(); },50);
+}
+
+function duelRemoveAgent(idx) {
+  duelSaveCurrentNames();
+  if (duelSetup.names.length<=2) { alert('Il faut au moins un agent adversaire'); return; }
+  duelSetup.names.splice(idx,1);
+  const list=document.getElementById('duelAgentList');
+  if (list) list.innerHTML=renderDuelAgentInputs();
+}
+
+function duelGoSelectRace() {
+  const n0=document.getElementById('duelName0')?.value.trim();
+  if (!n0) { alert('Entrez votre identité'); return; }
+  if (!geoReady) { alert('Activez d\'abord la géolocalisation'); return; }
+  duelSetup.names=[n0.toUpperCase()];
+  duelSetup.step='race'; renderRunnerPanel();
+}
+
+function duelCreateSession() {
+  const raceIdx=parseInt(document.getElementById('duelRaceSelect')?.value);
+  if (isNaN(raceIdx)||!races[raceIdx]) { alert('Sélectionnez un parcours'); return; }
+  const race=races[raceIdx];
+  const nb=race.checkpoints.length;
+  function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+  // Juste le créateur, les autres rejoindront dynamiquement
+  const players = [{
+    name: duelSetup.names[0], ready:false, cpIdx:0, finished:false, finishTime:null,
+    cpOrder: shuffle([...Array(nb).keys()])
+  }];
+  const sessionId=Date.now().toString(36);
+  duelSession={ id:sessionId, raceIdx, players, started:false, startTime:null, createdAt:Date.now() };
+  myAgentIdx=0; duelSave(); startDuelSync();
+  runState.race=race; showRacePreview(); renderRunnerPanel();
+}
+
+// ── DUEL SYNC (localStorage + BroadcastChannel) ──
+function duelSave() {
+  try { localStorage.setItem(DUEL_KEY,JSON.stringify(duelSession)); } catch(e) {}
+  supaSessionSave(duelSession).catch(e => console.warn('Supabase duelSave:', e));
+}
+function duelLoad() {
+  try { const raw=localStorage.getItem(DUEL_KEY); if(raw) return JSON.parse(raw); } catch(e) {} return null;
+}
+function startDuelSync() {
+  stopDuelSync();
+  // Realtime Supabase
+  supaSubscribe(duelSession.id, remote => {
+    if (!duelSession || remote.id !== duelSession.id) return;
+    let changed = false;
+    remote.players.forEach((rp, i) => {
+      if (i === myAgentIdx) return;
+      const local = duelSession.players[i];
+      if (rp.cpIdx!==local.cpIdx||rp.ready!==local.ready||rp.finished!==local.finished) { duelSession.players[i]=rp; changed=true; }
+    });
+    if (remote.started && !duelSession.started) { duelSession.started=true; duelSession.startTime=remote.startTime; changed=true; }
+    if (changed) duelOnSyncReceived();
+  });
+  // Polling fallback toutes les 2s
+  duelSyncInterval = setInterval(async () => {
+    if (!duelSession) return;
+    try {
+      const remote = await supaSessionLoad(duelSession.id);
+      if (!remote) return;
+      let changed = false;
+      remote.players.forEach((rp, i) => {
+        if (i === myAgentIdx) return;
+        const local = duelSession.players[i];
+        if (rp.cpIdx!==local.cpIdx||rp.ready!==local.ready||rp.finished!==local.finished) { duelSession.players[i]=rp; changed=true; }
+      });
+      if (remote.started && !duelSession.started) { duelSession.started=true; duelSession.startTime=remote.startTime; changed=true; }
+      if (changed) duelOnSyncReceived();
+    } catch(e) {}
+  }, 2000);
+}
+function stopDuelSync() {
+  clearInterval(duelSyncInterval); duelSyncInterval=null;
+  supaUnsubscribe();
+}
+function duelOnSyncReceived() {
+  if (!duelSession) return;
+
+  // Détection annulation par le créateur
+  if (duelSession.cancelled && myAgentIdx !== 0) {
+    stopRunnerTimer(); stopDuelSync();
+    showOverlay('⚠ SESSION ANNULÉE', `L'agent <b>${duelSession.players[0].name}</b> a annulé la session.`, () => resetRunner());
+    return;
+  }
+
+  // Détection abandon d'un autre agent
+  if (duelSession.started && runState.startTime) {
+    duelSession.players.forEach((p, i) => {
+      if (i !== myAgentIdx && p.abandoned && !p._notified) {
+        duelSession.players[i]._notified = true;
+        // Affiche un message non-bloquant en bas du panel
+        const el = document.getElementById('duelAbandonMsg');
+        if (el) {
+          el.innerHTML += `<div class="info-box" style="border-color:var(--red);color:var(--red-l)">⚠ <b>${p.name}</b> a abandonné la mission</div>`;
+        }
+      }
+    });
+  }
+
+  if (duelSession.started&&runState.startTime===null&&myAgentIdx!==null) {
+    const myOrder=duelSession.players[myAgentIdx].cpOrder;
+    runState.race=races[duelSession.raceIdx]; runState.cpIdx=duelSession.players[myAgentIdx].cpIdx;
+    runState.startTime=duelSession.startTime; runState.elapsed=Math.floor((Date.now()-duelSession.startTime)/1000);
+    startRunnerTimer_duel(); updateRunMapForCP(myOrder); renderRunnerPanel(); return;
+  }
+  if (duelSession.started&&runState.startTime) {
+    const opp=duelSession.players[1-myAgentIdx];
+    if (opp&&opp.finished&&!duelSession.players[myAgentIdx].finished) {
+      stopRunnerTimer(); stopDuelSync();
+      duelSession.players[myAgentIdx].finished=true; duelSave();
+      showOverlay('⚠ MISSION ANNULÉE',`L'agent <b>${opp.name}</b> a complété le parcours en premier.`,()=>resetRunner()); return;
+    }
+    const statusEl=document.getElementById('duelOppStatus');
+    if (statusEl) statusEl.innerHTML=duelSession.players.filter((_,i)=>i!==myAgentIdx).map(p=>`${p.name} : balise ${p.cpIdx}/${duelSession.players[myAgentIdx].cpOrder.length}`).join('<br>');
+    return;
+  }
+  renderRunnerPanel();
+}
+
+// ── DUEL LOBBY ──
+function renderDuelLobby(b) {
+  const s=duelSession;
+  const me=s.players[myAgentIdx];
+  const allReady=s.players.every(p=>p.ready);
+  const race=races[s.raceIdx];
+  const agentsHtml=s.players.map((p,i)=>`
+    <div class="info-box" style="border-color:${p.ready?'var(--green-l)':'var(--border)'}">
+      ${i===0?'▲':'◈'} <b>${p.name}</b>${i===myAgentIdx?' (vous)':''} — ${p.ready?'<span style="color:var(--green-ll)">✓ LOCALISÉ</span>':'<span style="color:var(--text3)">En attente…</span>'}
+    </div>`).join('');
+  b.innerHTML=`
+    <div class="panel-section">
+      <div class="panel-label" style="color:var(--amber-l)">⚔ SESSION DUEL — ATTENTE</div>
+      <div class="info-box" style="border-color:var(--amber)">
+        <b>${race?.name||'—'}</b><br>${race?fmtDist(calcRaceDist(race))+' · '+race.checkpoints.length+' balises':''}
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">Agents</div>
+      ${agentsHtml}
+    </div>
+    ${myAgentIdx!==0&&!me.ready?`
+    <div class="panel-section">
+      <div class="panel-label">Géolocalisation</div>
+      <button class="panel-btn secondary" id="geoBtn" onclick="startGeo(duelMarkReady)">▶ Activer le GPS</button>
+      <div class="info-box" id="geoStatus" style="display:none"></div>
+    </div>`:''}
+    <div class="panel-section">
+      ${!me.ready?`
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">Placez-vous à moins de ${START_RADIUS}m du départ ▲</div>
+        <div id="duelProximityStatus" class="info-box" style="display:none"></div>
+      `:allReady&&myAgentIdx===0?`
+        <button class="panel-btn" onclick="duelLaunchRace()" style="border-color:var(--amber-l);color:var(--amber-l);background:rgba(200,160,0,.15);padding:16px;font-size:15px;letter-spacing:3px">
+          ▶ LANCER LA MISSION
+        </button>
+      `:allReady?`
+        <div class="info-box" style="border-color:var(--amber)">Tous localisés.<br><b>En attente que ${s.players[0].name} lance…</b></div>
+      `:`<div class="info-box">En attente de localisation des agents…</div>`}
+    </div>
+    ${myAgentIdx===0?`
+    <div class="panel-section">
+      <div class="panel-label">Agents adversaires : rejoindre la session</div>
+      <div class="info-box" style="font-size:10px">Sur chaque téléphone : Mode Duel → "Rejoindre une session"</div>
+      <div class="info-box" style="border-color:var(--amber);font-size:11px">Session ID : <b>${s.id}</b></div>
+    </div>`:`
+    <div class="panel-section">
+      <div class="panel-label" style="font-size:9px">Session ID : ${s.id}</div>
+    </div>`}
+    <div class="panel-section">
+      <button class="panel-btn danger" onclick="duelAbort()">✕ Annuler la session</button>
+    </div>`;
+  if (myAgentIdx===0&&geoReady&&!me.ready) duelCheckStartProximity();
+}
+
+function duelCheckStartProximity() {
+  if (!duelSession||!playerLat||!runState.race) return;
+  const startPt=runState.race.start||races[duelSession.raceIdx]?.start;
+  if (!startPt) return;
+  const d=dist([playerLat,playerLon],startPt);
+  const el=document.getElementById('duelProximityStatus');
+  if (el) {
+    el.style.display='block';
+    if (d<=START_RADIUS) { el.innerHTML='<b style="color:var(--green-ll)">◉ AGENT LOCALISÉ</b> · au point de départ'; duelMarkReady(); }
+    else { el.innerHTML=`Distance au départ : <b>${Math.round(d)} m</b> (max ${START_RADIUS}m)`; }
+  } else if (d<=START_RADIUS) { duelMarkReady(); }
+}
+function duelMarkReady() {
+  if (!duelSession||myAgentIdx===null) return;
+  if (duelSession.players[myAgentIdx].ready) return;
+  duelSession.players[myAgentIdx].ready=true; duelSave();
+  showOverlay('◉ AGENT LOCALISÉ',`<b>${duelSession.players[myAgentIdx].name}</b> — position confirmée.`,()=>renderRunnerPanel());
+}
+function duelLaunchRace() {
+  if (!duelSession) return;
+  if (!duelSession.players.every(p=>p.ready)) { alert('Tous les agents doivent être localisés'); return; }
+  duelSession.started=true; duelSession.startTime=Date.now(); duelSave(); duelStartRunning();
+}
+function duelStartRunning() {
+  const myOrder=duelSession.players[myAgentIdx].cpOrder;
+  runState.race=races[duelSession.raceIdx]; runState.cpIdx=0;
+  runState.startTime=duelSession.startTime; runState.elapsed=Math.floor((Date.now()-duelSession.startTime)/1000);
+  startRunnerTimer_duel(); updateRunMapForCP(myOrder); renderRunnerPanel();
+  document.getElementById('runnerStatusTxt').textContent='⚔ DUEL EN COURS';
+  // Mobile : réduire la sidebar pour voir la carte
+  if (window.innerWidth <= 720) {
+    setTimeout(() => document.getElementById('runnerSidebar')?.classList.add('collapsed'), 800);
+  }
+}
+
+function renderDuelActive(b) {
+  const r=runState.race;
+  const myOrder=duelSession.players[myAgentIdx].cpOrder;
+  const myCP=duelSession.players[myAgentIdx].cpIdx;
+  const nextCP=r.checkpoints[myOrder[myCP]];
+  const opponents=duelSession.players.filter((_,i)=>i!==myAgentIdx);
+  b.innerHTML=`
+    <div class="panel-section" style="border-color:var(--amber);background:rgba(200,160,0,.05)">
+      <div class="timer-display blink" id="timerDisp" style="color:var(--amber-l)">00:00</div>
+      <div class="timer-sub" id="distRun">0 m parcourus</div>
+    </div>
+    ${nextCP?`
+    <div class="panel-section">
+      <div class="panel-label">Objectif — balise ${myCP+1}/${myOrder.length}</div>
+      <div class="info-box" style="border-color:var(--amber)"><b>${nextCP.name}</b></div>
+    </div>`:''}
+    <div class="panel-section">
+      <div class="panel-label">Adversaires</div>
+      <div id="duelOppStatus">${opponents.map(p=>`<div class="info-box">${p.name} : balise ${p.cpIdx}/${myOrder.length}</div>`).join('')}</div>
+    </div>
+    <div id="duelAbandonMsg"></div>
+    <div class="panel-section">
+      <button class="panel-btn danger" onclick="duelAbort()">■ Abandonner</button>
+    </div>`;
+  startTimerDisplay();
+}
+
+function duelJoinAsAgent2() {
+  const remote=duelLoad();
+  if (!remote) { alert('Aucune session trouvée. L\'agent 1 doit d\'abord créer la session.'); return; }
+  if (remote.started) { alert('La session a déjà démarré.'); return; }
+  duelSession=remote; myAgentIdx=1;
+  runState.race=races[duelSession.raceIdx];
+  startDuelSync(); showRacePreview(); renderRunnerPanel();
+}
+
+function renderDuelJoinPanel(b) {
+  b.innerHTML=`
+    <div class="panel-section">
+      <div class="panel-label" style="color:var(--amber-l);border-bottom:1px solid var(--amber);padding-bottom:6px;margin-bottom:12px">⚔ REJOINDRE UN DUEL</div>
+      <div class="info-box">Demandez le <b>code de session</b> à l'agent qui a créé le duel.</div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">Votre identité</div>
+      <input class="txt-input" id="joinAgentName" placeholder="Ex: WOLF, ECHO…" maxlength="12">
+      <div class="panel-label">Code de session</div>
+      <input class="txt-input" id="joinSessionCode" placeholder="Ex: mq3ozrs6" maxlength="16"
+        style="letter-spacing:4px;text-transform:uppercase;font-size:16px"
+        oninput="this.value=this.value.toLowerCase()">
+      <div id="joinError" style="font-family:var(--mono);font-size:11px;color:var(--red-l);min-height:16px;margin-bottom:6px"></div>
+      <button class="panel-btn" onclick="duelJoinWithCode()" style="border-color:var(--amber);color:var(--amber-l);background:rgba(200,160,0,.12)">⚔ Rejoindre la session</button>
+      <button class="panel-btn secondary" style="margin-top:6px" onclick="runnerMode=null;renderRunnerPanel()">← Retour</button>
+    </div>`;
+}
+
+async function duelJoinWithCode() {
+  const name = document.getElementById('joinAgentName')?.value.trim().toUpperCase();
+  const code = document.getElementById('joinSessionCode')?.value.trim().toLowerCase();
+  const errEl = document.getElementById('joinError');
+  if (!name) { errEl.textContent = '✕ Entrez votre identité'; return; }
+  if (!code) { errEl.textContent = '✕ Entrez le code de session'; return; }
+
+  // Cherche la session dans Supabase
+  errEl.textContent = '⏳ Recherche de la session…';
+  try {
+    const remote = await supaSessionLoad(code);
+    if (!remote) { errEl.textContent = '✕ Session introuvable — vérifiez le code'; return; }
+    if (remote.started) { errEl.textContent = '✕ Cette session a déjà démarré'; return; }
+
+    // Ajouter dynamiquement le nouveau joueur
+    function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+    const nb = races[remote.raceIdx]?.checkpoints.length || 0;
+    remote.players.push({
+      name, ready:false, cpIdx:0, finished:false, finishTime:null,
+      cpOrder: shuffle([...Array(nb).keys()])
+    });
+    const slotIdx = remote.players.length - 1;
+
+    duelSession = remote;
+    myAgentIdx = slotIdx;
+
+    // Charger la course depuis Supabase si pas en local
+    if (!races[duelSession.raceIdx]) {
+      const remoteRaces = await supaRacesLoad();
+      if (remoteRaces.length) { races = remoteRaces; try { localStorage.setItem('orient_races', JSON.stringify(races)); } catch(e) {} }
+    }
+    runState.race = races[duelSession.raceIdx];
+
+    await supaSessionSave(duelSession);
+    showRacePreview();
+    startDuelSync();
+    renderDuelJoinReady(document.getElementById('runnerBody'));
+  } catch(e) {
+    errEl.textContent = '✕ Erreur : ' + e.message;
+  }
+}
+
+function renderDuelJoinReady(b) {
+  const race = races[duelSession.raceIdx];
+  b.innerHTML=`
+    <div class="panel-section">
+      <div class="panel-label" style="color:var(--amber-l)">⚔ SESSION REJOINTE</div>
+      <div class="info-box" style="border-color:var(--amber)">
+        <b>${race?.name || '—'}</b><br>
+        ${race ? fmtDist(calcRaceDist(race)) + ' · ' + race.checkpoints.length + ' balises' : ''}
+      </div>
+      <div class="info-box">Le départ ▲ est visible sur la carte.<br>Rejoignez-le pour être localisé.</div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">Géolocalisation</div>
+      <button class="panel-btn secondary" id="geoBtn" onclick="startGeo(duelMarkReady)">▶ Activer le GPS</button>
+      <div class="info-box" id="geoStatus" style="display:none"></div>
+    </div>
+    <div class="panel-section">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">Placez-vous à moins de ${START_RADIUS}m du départ ▲</div>
+      <div id="duelProximityStatus" class="info-box" style="display:none"></div>
+    </div>
+    <div class="panel-section">
+      <button class="panel-btn danger" onclick="duelAbort()">✕ Annuler</button>
+    </div>`;
+}
+
+async function duelAbort() {
+  stopRunnerTimer();
+  if (myAgentIdx === 0) {
+    // Créateur : annule pour tout le monde
+    try {
+      await supaSessionUpdate(duelSession.id, { started: false, players: duelSession.players.map(p => ({...p, abandoned: true})), cancelled: true });
+    } catch(e) {}
+    stopDuelSync();
+    try { localStorage.removeItem(DUEL_KEY); } catch(e) {}
+    showOverlay('Session annulée', 'La session a été annulée pour tous les agents.', () => resetRunner());
+  } else {
+    // Autre agent : marque comme abandonné, les autres continuent
+    duelSession.players[myAgentIdx].abandoned = true;
+    try {
+      await supaSessionUpdate(duelSession.id, { players: duelSession.players });
+    } catch(e) {}
+    stopDuelSync();
+    showOverlay('Mission abandonnée', 'Vous avez quitté le duel.', () => resetRunner());
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SOLO RUNNER
+// ═══════════════════════════════════════════════════════
+function renderRunnerSelectRace(b) {
+  b.innerHTML=`
+    <div class="panel-section">
+      <div class="panel-label">Choisir votre course</div>
+      ${races.length
+        ?`<select class="sel-input" id="raceSelect">${races.map((r,i)=>`<option value="${i}">${r.name} — ${fmtDist(calcRaceDist(r))} · ${r.checkpoints.length} balises</option>`).join('')}</select>
+          <button class="panel-btn" onclick="selectRace()">✓ Sélectionner cette course</button>`
+        :'<div class="info-box" style="color:var(--text3)">Aucune course disponible.</div>'}
+    </div>
+    <div class="panel-section">
+      <button class="panel-btn secondary" onclick="runnerMode=null;renderRunnerPanel()">← Retour</button>
+    </div>`;
+}
+function selectRace() {
+  const idx=parseInt(document.getElementById('raceSelect')?.value);
+  if (isNaN(idx)||!races[idx]) return;
+  runState.race=races[idx]; runState.cpIdx=0; runState.skipped=[];
+  geoReady=false; playerLat=null; playerLon=null;
+  showRacePreview(); renderRunnerPanel();
+}
+function showRacePreview() {
+  clearRunMarkers();
+  const r=runState.race;
+  if (r.start) { const m=L.marker(r.start,{icon:mkIcon('<div class="icon-start">▲</div>')}).addTo(runMap); runMarkers.push(m); }
+  r.checkpoints.forEach(cp=>{ const m=L.marker(cp.ll,{icon:mkIcon('<div class="icon-cp" style="opacity:.25">◈</div>',24)}).addTo(runMap); runMarkers.push(m); });
+  const pts=[r.start,...r.checkpoints.map(c=>c.ll)].filter(Boolean);
+  if (pts.length>1) runMap.fitBounds(L.latLngBounds(pts),{padding:[40,40]});
+}
+function renderRunnerPreStart(b) {
+  const rc=runState.race;
+  b.innerHTML=`
+    <div class="panel-section">
+      <div class="panel-label">Course chargée</div>
+      <div class="info-box"><b>${rc.name}</b><br>${fmtDist(calcRaceDist(rc))} · ${rc.checkpoints.length} balise(s)</div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">Géolocalisation</div>
+      <button class="panel-btn secondary" id="geoBtn" onclick="startGeo()">▶ Activer le GPS</button>
+      <div class="info-box" id="geoStatus" style="display:none"></div>
+    </div>
+    <div class="panel-section">
+      <button class="panel-btn success" id="startRaceBtn" disabled onclick="startRace()">◈ Démarrer la course</button>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:6px">Placez-vous à moins de ${START_RADIUS}m du départ ▲</div>
+    </div>
+    <div class="panel-section">
+      <button class="panel-btn secondary" onclick="backToSelect()">← Choisir une autre course</button>
+    </div>`;
+}
+function backToSelect() {
+  if (runState.watchId){navigator.geolocation.clearWatch(runState.watchId);runState.watchId=null;}
+  runState.race=null; geoReady=false; playerLat=null; playerLon=null;
+  if(playerMarker){runMap.removeLayer(playerMarker);playerMarker=null;}
+  clearRunMarkers(); renderRunnerPanel();
+}
+function startGeo(onReady) {
+  if (!navigator.geolocation) { alert('Géolocalisation non disponible'); return; }
+  const statusEl=document.getElementById('geoStatus');
+  if (statusEl){statusEl.style.display='block';statusEl.innerHTML='Acquisition du signal GPS…';}
+  const btn=document.getElementById('geoBtn');
+  if (btn){btn.textContent='⏳ GPS en cours…';btn.disabled=true;}
+  showSatAnimation(null,null);
+  if (runState.watchId) navigator.geolocation.clearWatch(runState.watchId);
+  let firstFix=true;
+  runState.watchId=navigator.geolocation.watchPosition(pos=>{
+    playerLat=pos.coords.latitude; playerLon=pos.coords.longitude; geoReady=true;
+    const acc=Math.round(pos.coords.accuracy);
+    if (statusEl) statusEl.innerHTML='<b>GPS actif</b> · précision ±'+acc+'m';
+    const gpsEl=document.getElementById('runnerGPS');
+    if (gpsEl) gpsEl.textContent='GPS: ±'+acc+'m';
+    if (firstFix){
+      firstFix=false;
+      if (_satTimer) clearTimeout(_satTimer);
+      showSatAnimation(playerLat,playerLon);
+      if (typeof onReady==='function') onReady();
+    }
+    updatePlayerMarker();
+    if (runnerMode==='solo') checkStartProximity();
+    else duelCheckStartProximity();
+  }, err=>{
+    if (statusEl) statusEl.innerHTML='✕ Erreur GPS : '+err.message;
+    hideSatAnimation();
+  },{enableHighAccuracy:true,maximumAge:2000,timeout:15000});
+}
+function checkStartProximity() {
+  if (!runState.race||runState.startTime||!playerLat) return;
+  const d=dist([playerLat,playerLon],runState.race.start);
+  const btn=document.getElementById('startRaceBtn');
+  if (btn){
+    if (d<=START_RADIUS){btn.disabled=false;btn.textContent='◈ Démarrer la course';}
+    else{btn.disabled=true;btn.textContent='◈ Trop loin du départ ('+Math.round(d)+'m)';}
+  }
+}
+function updatePlayerMarker() {
+  if (!runMap||!playerLat) return;
+  if (!playerMarker) { playerMarker=L.marker([playerLat,playerLon],{icon:mkIcon('<div style="background:rgba(240,192,0,.9);border-radius:50%;width:16px;height:16px;border:2px solid #fff;"></div>',16)}).addTo(runMap); }
+  else { playerMarker.setLatLng([playerLat,playerLon]); }
+}
+function renderRunnerActive(b) {
+  const r=runState.race;
+  const nextCP=r.checkpoints[runState.cpIdx];
+  b.innerHTML=`
+    <div class="panel-section">
+      <div class="timer-display blink" id="timerDisp">00:00</div>
+      <div class="timer-sub" id="distRun">0 m parcourus</div>
+    </div>
+    ${nextCP?`
+    <div class="panel-section">
+      <div class="panel-label">Objectif — balise ${runState.cpIdx+1}/${r.checkpoints.length}</div>
+      <div class="info-box"><b>${nextCP.name}</b></div>
+      <button class="panel-btn secondary" onclick="skipCP()">⏭ Faire l'impasse</button>
+    </div>`:''}
+    <div class="panel-section">
+      <button class="panel-btn danger" onclick="stopRace()">■ Arrêter la course</button>
+    </div>`;
+  startTimerDisplay();
+}
+function startRace() {
+  if (!geoReady){alert('Activez d\'abord la géolocalisation');return;}
+  runState.startTime=Date.now(); runState.elapsed=0;
+  startRunnerTimer(); updateRunMapForCP(); renderRunnerPanel();
+  document.getElementById('runnerStatusTxt').textContent='Course en cours…';
+  // Mobile : réduire la sidebar pour voir la carte
+  if (window.innerWidth <= 720) {
+    setTimeout(() => document.getElementById('runnerSidebar')?.classList.add('collapsed'), 800);
+  }
+}
+function startRunnerTimer() {
+  stopRunnerTimer();
+  runState.timerInt=setInterval(()=>{
+    if (!runState.startTime) return;
+    runState.elapsed=Math.floor((Date.now()-runState.startTime)/1000);
+    updateTimerDisplay(); updateDistDisplay(); checkCPProximity();
+  },1000);
+}
+function stopRunnerTimer(){clearInterval(runState.timerInt);runState.timerInt=null;}
+function startTimerDisplay(){updateTimerDisplay();updateDistDisplay();}
+function updateTimerDisplay(){const el=document.getElementById('timerDisp');if(!el)return;const s=runState.elapsed,m=Math.floor(s/60),sec=s%60;el.textContent=(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;}
+function updateDistDisplay(){const el=document.getElementById('distRun');if(!el||!runState.race)return;const pts=[runState.race.start,...runState.race.checkpoints.slice(0,runState.cpIdx).map(c=>c.ll)].filter(Boolean);if(playerLat)pts.push([playerLat,playerLon]);el.textContent=fmtDist(totalDist(pts))+' parcourus';}
+function checkCPProximity(){
+  if(!playerLat||!runState.race||!runState.startTime)return;
+  const r=runState.race;if(runState.cpIdx>=r.checkpoints.length)return;
+  const cp=r.checkpoints[runState.cpIdx];const d=dist([playerLat,playerLon],cp.ll);
+  document.getElementById('runnerStatusTxt').textContent='Balise '+(runState.cpIdx+1)+'/'+r.checkpoints.length+' · '+fmtDist(d);
+  if(d<=CP_VALIDATE_RADIUS)validateCP();
+}
+function validateCP(){
+  const r=runState.race;const cp=r.checkpoints[runState.cpIdx];const t=fmtTime(runState.elapsed);
+  const pts=[r.start,...r.checkpoints.slice(0,runState.cpIdx+1).map(c=>c.ll)].filter(Boolean);const d=fmtDist(totalDist(pts));
+  runState.cpIdx++;
+  if(runState.cpIdx>=r.checkpoints.length){
+    stopRunnerTimer();const total=r.checkpoints.length-runState.skipped.length;
+    showOverlay('🏁 Parcours terminé !',`Bravo !<br><b>${total} balise(s) validée(s)</b><br>Temps : <b>${t}</b><br>Distance : <b>${fmtDist(calcRaceDist(r))}</b>`,()=>resetRunner());
+  } else {showOverlay('◈ Balise validée !',`<b>${cp.name}</b> validée !<br>Temps : ${t}<br>Distance : ${d}`,()=>{updateRunMapForCP();renderRunnerPanel();});}
+}
+function skipCP(){
+  runState.skipped.push(runState.cpIdx);runState.cpIdx++;
+  if(runState.cpIdx>=runState.race.checkpoints.length){
+    stopRunnerTimer();const done=runState.race.checkpoints.length-runState.skipped.length;
+    showOverlay('Course terminée',`Balises validées : <b>${done}/${runState.race.checkpoints.length}</b><br>Temps : <b>${fmtTime(runState.elapsed)}</b>`,()=>resetRunner());
+  } else {updateRunMapForCP();renderRunnerPanel();}
+}
+function stopRace(){
+  stopRunnerTimer();const done=runState.cpIdx;const total=runState.race?runState.race.checkpoints.length:0;
+  showOverlay('Course arrêtée',`Balises validées : <b>${done}/${total}</b><br>Temps : <b>${fmtTime(runState.elapsed)}</b>`,()=>resetRunner());
+}
+function resetRunner(){
+  stopDuelSync();
+  if(runState.watchId){navigator.geolocation.clearWatch(runState.watchId);runState.watchId=null;}
+  runState={race:null,cpIdx:0,startTime:null,watchId:null,elapsed:0,timerInt:null,skipped:[]};
+  geoReady=false;playerLat=null;playerLon=null;duelSession=null;myAgentIdx=null;runnerMode=null;
+  if(playerMarker){runMap.removeLayer(playerMarker);playerMarker=null;}
+  clearRunMarkers();
+  document.getElementById('runnerStatusTxt').textContent='Aucune course en cours';
+  document.getElementById('runnerGPS').textContent='GPS: inactif';
+  renderRunnerPanel();
+}
+function updateRunMapForCP(cpOrder){
+  clearRunMarkers();const r=runState.race;if(!r)return;
+  const order=cpOrder||r.checkpoints.map((_,i)=>i);
+  if(r.start){const m=L.marker(r.start,{icon:mkIcon('<div class="icon-start" style="opacity:.3">▲</div>')}).addTo(runMap);runMarkers.push(m);}
+  order.forEach((realIdx,seqIdx)=>{
+    const cp=r.checkpoints[realIdx];let iconHtml;
+    if(seqIdx<runState.cpIdx)iconHtml='<div class="icon-cp-done">✓</div>';
+    else if(seqIdx===runState.cpIdx)iconHtml='<div class="icon-cp-active">◈</div>';
+    else iconHtml='<div class="icon-cp" style="opacity:.2">◈</div>';
+    const m=L.marker(cp.ll,{icon:mkIcon(iconHtml,seqIdx===runState.cpIdx?28:22)}).addTo(runMap);
+    if(seqIdx===runState.cpIdx){
+      m.bindPopup('<b>'+cp.name+'</b><br><span style="color:var(--green-ll)">Votre objectif</span>').openPopup();
+      runMap.setView(cp.ll,15);
+    }
+    runMarkers.push(m);
+  });
+}
+function clearRunMarkers(){runMarkers.forEach(m=>{try{runMap.removeLayer(m);}catch(e){}});runMarkers=[];}
+
+function startRunnerTimer_duel(){
+  stopRunnerTimer();
+  runState.timerInt=setInterval(()=>{
+    if(!runState.startTime)return;
+    runState.elapsed=Math.floor((Date.now()-runState.startTime)/1000);
+    updateTimerDisplay();updateDistDisplay();duelCheckCPProximity();
+  },1000);
+}
+function duelCheckCPProximity(){
+  if(!playerLat||!duelSession||!runState.race)return;
+  const myOrder=duelSession.players[myAgentIdx].cpOrder;
+  const myCP=duelSession.players[myAgentIdx].cpIdx;
+  if(myCP>=myOrder.length)return;
+  const cp=runState.race.checkpoints[myOrder[myCP]];
+  const d=dist([playerLat,playerLon],cp.ll);
+  document.getElementById('runnerStatusTxt').textContent=`⚔ Balise ${myCP+1}/${myOrder.length} · ${fmtDist(d)}`;
+  if(d<=CP_VALIDATE_RADIUS)duelValidateCP();
+}
+function duelValidateCP(){
+  const myOrder=duelSession.players[myAgentIdx].cpOrder;
+  const myCP=duelSession.players[myAgentIdx].cpIdx;
+  const cp=runState.race.checkpoints[myOrder[myCP]];const t=fmtTime(runState.elapsed);
+  duelSession.players[myAgentIdx].cpIdx++;const newCP=duelSession.players[myAgentIdx].cpIdx;
+  duelSave();
+  if(newCP>=myOrder.length){
+    stopRunnerTimer();duelSession.players[myAgentIdx].finished=true;duelSession.players[myAgentIdx].finishTime=runState.elapsed;
+    duelSave();stopDuelSync();
+    showOverlay('🏆 MISSION ACCOMPLIE !',`Toutes les balises trouvées !<br>Temps : <b>${t}</b>`,()=>resetRunner());
+  } else {
+    runState.cpIdx=newCP;updateRunMapForCP(myOrder);
+    const nextCP=runState.race.checkpoints[myOrder[newCP]];
+    showOverlay('◈ Balise validée !',`<b>${cp.name}</b> validée !<br>Temps : ${t}<br>Prochaine : <b>${nextCP.name}</b>`,()=>renderRunnerPanel());
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  OVERLAY
+// ═══════════════════════════════════════════════════════
+function showOverlay(title,msg,cb){
+  removeOverlay();
+  const wrap=document.createElement('div');wrap.className='celebration-overlay';wrap.id='overlay';
+  wrap.innerHTML=`<div class="celebration-box"><h2>${title}</h2><p>${msg}</p><button onclick="removeOverlay();(${cb.toString()})()">Continuer →</button></div>`;
+  const target=document.querySelector('#runner .map-area')||document.body;
+  target.appendChild(wrap);
+}
+function removeOverlay(){const el=document.getElementById('overlay');if(el)el.remove();}
+</script>
+</body>
+</html>
